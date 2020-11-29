@@ -2,8 +2,14 @@
 
 #include "color.h"
 
+/*
+   Namespace to include all Utilities
+*/
 namespace Util
 {
+/*
+   Transform HEX Strinv Color value into Color Struct
+*/
 Color hexToRGB(String hexValue)
 {
   char *ptr;
@@ -17,11 +23,17 @@ Color hexToRGB(String hexValue)
     .b = (ui8)((hexint) & 0xFF)};
 }
 
+/*
+   convert Integer value into two digit HEX String
+*/
 String hexify(ui8 a)
 {
   return a > 15 ? String(a, HEX) : "0" + String(a, HEX);
 }
 
+/*
+   Transform Color struct into HEX String Color value
+*/
 String RGBToHex(Color c)
 {
   return "#" + hexify(c.r) + hexify(c.g) + hexify(c.b);

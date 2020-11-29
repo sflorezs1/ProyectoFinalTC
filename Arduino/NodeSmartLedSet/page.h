@@ -4,8 +4,14 @@
 
 #include "util.h"
 
+/*
+   Namespace to include all Server Pages
+*/
 namespace NMCUServer
 {
+/*
+   Handle Network registration page
+*/
 void handleRoot()
 {
   server.send(200, "text/html", R"rawliteral(
@@ -33,6 +39,10 @@ void handleRoot()
         )rawliteral");
 }
 
+/*
+   Handle a get_temperature request to the server,
+   Sends a float in plain text
+*/
 void handleTempResponse()
 {
   Serial.println("Temperature requested");
@@ -41,38 +51,53 @@ void handleTempResponse()
   server.send(200, "text/plain", String(temperature));
 }
 
+/*
+    Handle server response with arguments for WiFi Credentials
+*/
 void handleResponse()
 {
+  // Check if request has arguments for wssid parameter
   if (server.hasArg("wssid") && server.arg("wssid").length() > 0)
   {
+    // Store wssid as WiFi SSID
     wifiId = server.arg("wssid");
     Serial.print("Wifi ssid aquired successfully = ");
     Serial.println(wifiId);
   }
+  // Check if request has arguments for wpass parameter
   if (server.hasArg("wpass") && server.arg("wpass").length() > 0)
   {
+    // Store wpass as WiFi Password
     wifiPass = server.arg("wpass");
     Serial.print("Wifi password aquired successfully = ");
     Serial.println(wifiPass);
   }
 }
 
+/*
+    Handle server response for set_leds,
+    Sets LEDs to given colors
+*/
 void handleColorResponse()
 {
   Serial.println("Color given");
+  // Check if request has arguments for led_color_1 parameter
   if (server.hasArg("led_color_1") && server.arg("led_color_1").length() > 0)
   {
+    // Set LED l0 to given HEX String Color
     l0.setColor(Util::hexToRGB(server.arg("led_color_1")));
-    l0.printColor();
+    // l0.printColor();
   }
   else
   {
     Serial.println("No Color for led1 given on request");
   }
+  // Check if request has arguments for led_color_2 parameter
   if (server.hasArg("led_color_2") && server.arg("led_color_2").length() > 0)
   {
+    // Set LED l0 to given HEX String Color
     l1.setColor(Util::hexToRGB(server.arg("led_color_2")));
-    l1.printColor();
+    // l1.printColor();
   }
   else
   {
@@ -81,6 +106,11 @@ void handleColorResponse()
   server.send(200, "text/plain", "OK");
 }
 
+
+/*
+    Handle server request for get_leds,
+    sends JSON with HEX Strings for Current Colors on LEDs
+*/
 void hanldeColorRequest()
 {
   Serial.println("Color requested");
@@ -91,6 +121,9 @@ void hanldeColorRequest()
   server.send(200, "application/json", response);
 }
 
+/*
+   Handle server on 404 Not Found
+*/
 void handleNotFound()
 {
   Serial.println("Someone tried to connect to non routed page");

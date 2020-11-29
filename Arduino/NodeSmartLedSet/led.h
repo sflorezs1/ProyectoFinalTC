@@ -15,6 +15,9 @@ typedef unsigned short int ui8;
 
 ui8 currentAddress = 0;
 
+/*
+   Return the next assignable address in the EEPROM
+*/
 unsigned int assignAddress()
 {
   if (currentAddress >= wifiIdAddress)
@@ -24,9 +27,18 @@ unsigned int assignAddress()
   return currentAddress++;
 }
 
+/*
+   Basic LED Class to manage a RGB Led
+   Color c: Current Color the LED is representing
+   unsigned short int rPin, gPin, bPin, rAddr, gAddr, bAddr: Physical pins and EEPROM addresses
+   String identifier: String identifier for the LED
+*/
 class Led
 {
   public:
+    /*
+       Constructor
+    */
     Led(String identifier, ui8 rPin, ui8 gPin, ui8 bPin)
     {
       pinMode(rPin, OUTPUT);
@@ -41,6 +53,10 @@ class Led
       this->bAddr = assignAddress();
     }
 
+    /*
+       Set a new Color
+       Color c: New color to represent
+    */
     void setColor(Color c)
     {
       // Common anode LED
@@ -52,6 +68,9 @@ class Led
       this->saveCurrentColor();
     }
 
+    /*
+       Print the current Color Struct Stored on EEPROM
+    */
     void printColorFromEEPROM() {
       Serial.println(EEPROM.read(this->rAddr));
       Serial.println(EEPROM.read(this->gAddr));
@@ -59,6 +78,9 @@ class Led
 
     }
 
+    /*
+       Print the current Color Struct Stored on Object
+    */
     void printColor()
     {
       Serial.print(this->identifier);
@@ -74,17 +96,26 @@ class Led
       Serial.println(this->bAddr);
     }
 
+    /*
+       Return the current Color Struct Stored in Object
+    */
     Color getColor()
     {
       return this->c;
     }
 
+    /*
+       Return LED String identifier
+    */
     String getIdentifier()
     {
       return this->identifier;
     }
 
-    // After setup
+    /*
+       Set LED to Color Struct Stored on EEPROM
+       Warning: Must be used after setup, EEPROM.begin()
+    */
     void recoverColor() {
       // Recover last color used
       // If none led will turn off
@@ -95,6 +126,9 @@ class Led
       });
     }
 
+    /*
+       Save current Color Struct stored in Object to EEPROM
+    */
     void saveCurrentColor()
     {
       EEPROM.write(this->rAddr, this->c.r);
@@ -104,7 +138,7 @@ class Led
     }
 
   private:
-    unsigned short int rPin, gPin, bPin, rAddr, gAddr, bAddr;
+    ui8 rPin, gPin, bPin, rAddr, gAddr, bAddr;
     Color c;
     String identifier;
 };

@@ -5,6 +5,9 @@
 #include <DHTesp.h>
 #include <ESP8266mDNS.h>
 
+/*
+  Include OWN headers
+*/
 #include "common.h"
 #include "page.h"
 #include "color.h"
@@ -23,36 +26,38 @@
 // Timeout for connection
 #define TIMEOUT 10000
 
+// DHT Sensor Object
 DHTesp dht;
+// Multicast DNS Object
 MDNSResponder mdns;
 
 bool isConnectionSuccessful = false;
 
+// Character to end Strings in EEPROM
 const char ENDCHAR = 3;
 
-unsigned long int startTime = 0, startTimeLoop = 0;
+// Time counters
+unsigned long int startTime, startTimeLoop = 0;
 
+// Store the themperature
 float temperature = 0.0;
 
+// Wireless Network Credentials
 String wifiId = "", wifiPass = "";
 
-// Color constants
-const Color REDC = {.r = 255, .g = 0, .b = 0};
-const Color GREENC = {.r = 0, .g = 255, .b = 0};
-const Color BLUEC = {.r = 0, .g = 0, .b = 255};
-const Color WHITEC = {.r = 255, .g = 255, .b = 255};
-const Color OFFC = {.r = 0, .g = 0, .b = 0};
 
 /*
   Setup Wifi Access Point for network configuration
 */
 void setAP()
 {
+  // Print Access Point Credentials
   Serial.print("SSID: ");
   Serial.println(AP_SSID);
   Serial.print("Password: ");
   Serial.println(AP_PASS);
 
+  // Create network objects
   IPAddress apLocalIp(192, 168, 1, 1);
   IPAddress apGateway(192, 168, 1, 254);
   IPAddress apSubnet(255, 255, 255, 0);
@@ -74,23 +79,33 @@ void setServer()
   Serial.println("Launching server");
   Serial.println("Server was launched on ");
 
+  // Create routes on server
+  // Handle root page, Wireless Network registration
   server.on("/",                HTTP_GET,   NMCUServer::handleRoot);
+  // Handle response on root page, try connection and store credentials
   server.on("/",                HTTP_POST,  NMCUServer::handleResponse);
+  // Handle led color request, return a JSON with all led colors
   server.on("/get_leds",        HTTP_GET,   NMCUServer::hanldeColorRequest);
+  // Handle led color change request, decode HEX String to RGB Struct
   server.on("/set_leds",        HTTP_GET,   NMCUServer::handleColorResponse);
+  // Handle temperature request, return float in plain text
   server.on("/get_temperature", HTTP_GET,   NMCUServer::handleTempResponse);
+  // Handle 404 not found
   server.onNotFound(                        NMCUServer::handleNotFound);
 
+  // Start server
   server.begin();
 }
 
 /*
-  Try to recover old credentials from the eeprom
+  Try to recover old credentials from the EEPROM
 */
 bool isConnectionStored()
 {
-  String id;
-  String pass;
+  String id;  // Temporal wifi ssid
+  String pass;  // Temporal wifi pass
+
+  // Try to retrieve wifi ssid from EEPROM
   for (unsigned short int i = wifiIdAddress; i <= wifiPassAddress; i++)
   {
     if (i == wifiPassAddress)
@@ -110,6 +125,7 @@ bool isConnectionStored()
   Serial.print("\tFound Wifi SSID = ");
   Serial.println(id);
 
+  // Try to retrieve wifi pass from EEPROM
   for (unsigned short int i = wifiIdAddress; i <= wifiPassAddress + 64; i++)
   {
     if (i == wifiPassAddress + 64)
@@ -134,11 +150,15 @@ bool isConnectionStored()
 
 void setup()
 {
+  // Init Serial Communication
   Serial.begin(9600);
+  // CLR
   pinMode(CLRPin, INPUT_PULLUP);
   bool resetRom = digitalRead(CLRPin);
   Serial.println(resetRom ? "YES" : "NO");
+  // Init EEPROM with 512 bytes
   EEPROM.begin(512);
+  // Erase all 512 bytes from EEPROM
   if (resetRom)
   {
     resetEEPROM();
@@ -146,17 +166,21 @@ void setup()
   Serial.println("Starting booting sequence...");
   // Set default leds
   Serial.println("Enumerating LEDs...");
+
+  // Recover last colors from the LEDs
   l0.recoverColor();
   l1.recoverColor();
+
+  // Setup DHT Temperature Sensor
   dht.setup(DHTPin, DHTesp::DHT22);
   Serial.println("Testing wireless connection...");
   Serial.println("\tChecking stored connections...");
   setServer();
-  l0.printColorFromEEPROM();
-  l1.printColorFromEEPROM();
+  // Try to recover last used connection
   if (isConnectionStored())
   {
     Serial.println("Using stored connection");
+    // Try to connect using retreived credentials
     if (attemptConnection())
     {
       Serial.println("Connection was successful!");
@@ -173,6 +197,7 @@ void setup()
     Serial.println("No stored connections were found,");
     isConnectionSuccessful = false;
   }
+  // Expose WiFi Access Point if not connected
   if (!isConnectionSuccessful)
   {
     setAP();
@@ -181,13 +206,17 @@ void setup()
 
 void loop()
 {
+  // Wait for the DHT minimum sampling period
   if ((millis() - startTimeLoop) >= (unsigned long long int) dht.getMinimumSamplingPeriod())
   {
     startTimeLoop = millis();
     float tmp = dht.getTemperature();
     temperature = isnan(tmp) ? temperature : tmp;
   }
+  // Manage Multicast DNS
   mdns.update();
+
+  // Manage Web Server
   server.handleClient();
   //Try Connection
   if (wifiId != "" && wifiPass != "" && !isConnectionSuccessful)
@@ -264,6 +293,7 @@ bool attemptConnection()
 void resetEEPROM()
 {
   Serial.print("Clearing EEPROM ");
+  // Go byte to byte reseting to 0
   for (unsigned int i = 0; i < 512; i++)
   {
     EEPROM.write(i, 0);
