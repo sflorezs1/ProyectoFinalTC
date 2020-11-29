@@ -1,14 +1,8 @@
 from socket import error
 from flask import Flask, request, redirect
-import socket
 from typing import Optional, Tuple
 from flask.helpers import url_for
 import requests
-import nmap
-import platform
-import subprocess
-
-nm: nmap.PortScanner = nmap.PortScanner()
 
 app: Flask = Flask(__name__)
 
@@ -19,7 +13,12 @@ last_color2: str = "#000000"
 
 @app.route("/", methods=['GET'])
 def home() -> str:
+    """
+        Handle main control page
+    """
+    # Retrieve Colors from the NodeMCU
     colors: Tuple[str, str] = get_prev_colors()
+    # Retrieve Temperature from the NodeMCU
     temp: float = get_temperature()
     return f"""
         <!-- View -->
@@ -46,29 +45,46 @@ def home() -> str:
 
 @app.route("/sent", methods=['GET'])
 def send_data() -> str:
+    """
+        Send LED Colors to NodeMCU WebServer through a request
+    """
+    # Get Color hex strings from request body
     color1: Optional[str] = request.args.get('led_color_1')
     color2: Optional[str] = request.args.get('led_color_2')
     global last_color1, last_color2
     print(color1, color2)
     if color1 and color2:
-        print("entered")
+        # Set last colors globally
         last_color1 = color1
         last_color2 = color2
+        # Try to send data to the NodeMCU WebServer
         try:
+            # Send get request with colors
             requests.get("http://" + server_ip + f"/set_leds?led_color_1={color1.replace('#', '%23')}&led_color_2={color2.replace('#', '%23')}")
         except ConnectionError as e:
             print(e)
+    # Redirect to main page
     return redirect(url_for("home"))
 
 def get_prev_colors() -> Tuple[str, str]:
+    """
+        Retrieve Stored colors from NodeMCU WebServer
+    """
+    # Try to get color JSON object from NodeMCU WebServer
     try:
         colors = requests.get("http://" + server_ip + "/get_leds").json()
+        # return HEX String Color Value
         return colors["color_led_1"], colors["color_led_2"]
     except Exception as e:
         print(e)
+        # return Last used colors
         return last_color1, last_color2
 
 def get_temperature() -> float:
+    """
+        Retrieve temperature from NodeMCU WebServer
+    """
+    # Try to get temperature from server
     try:
         temp: float = float(requests.get("http://" + server_ip + "/get_temperature").content)
         return temp
@@ -77,7 +93,13 @@ def get_temperature() -> float:
         return 0.0
 
 def show_temp(temp) -> str:
+    """
+        Return HTML to show temperature on Bootstrap 4 card
+    """
     def show_thermomether() -> str:
+        """
+            Return Icon for current temperature
+        """
         if temp < 10:
             return '<i class="fa fa-thermometer-empty"></i>'
         elif temp < 20:
@@ -99,6 +121,9 @@ def show_temp(temp) -> str:
     """
 
 def select_colors(color1: str, color2: str) -> str:
+    """
+        Show color selectors in Bootstrap 4 card
+    """
     return f"""
         <div class="card m-2">
             <div class="card-body">
@@ -117,6 +142,9 @@ def select_colors(color1: str, color2: str) -> str:
     """
 
 def show_led(name: str, id: str, value: str = "#000000") -> str:
+    """
+        Show Color Selector for specific LED
+    """
     return f"""
         <div class="card bg-secondary text-light text-center m-2 col w-25">
             <div class="card-body">
@@ -129,5 +157,6 @@ def show_led(name: str, id: str, value: str = "#000000") -> str:
         </div>
     """
 
+# Start application
 if __name__ == "__main__":
     app.run()
