@@ -28,8 +28,21 @@ def home() -> str:
                 <title>RGB Remote</title>
                 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA==" crossorigin="anonymous" />
+                <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
             </head>
             <body>
+                <script type="text/javascript">
+                    function updateTemperature() {{
+                        var tempSpan = document.querySelector("#temp_container");
+                        var request = new XMLHttpRequest();
+                        request.open("GET", '/get_temperature', true);
+                        request.onload = () => {{
+                            tempSpan.textContent = request.responseText;
+                        }};
+                        request.send();
+                    }}
+                    var interval = setInterval(updateTemperature, 5000);
+                </script>
                 <div class="container py-4">
                     <div class="card text-center text-light bg-primary mb-4">
                         <div class="card-body">
@@ -80,6 +93,13 @@ def get_prev_colors() -> Tuple[str, str]:
         # return Last used colors
         return last_color1, last_color2
 
+@app.route("/get_temperature", methods=['GET'])
+def get_temperature_wrapper() -> str:
+    """
+        Defines a route for JavaScript to access and update temperature readings every second
+    """
+    return str(get_temperature())
+    
 def get_temperature() -> float:
     """
         Retrieve temperature from NodeMCU WebServer
@@ -115,7 +135,7 @@ def show_temp(temp) -> str:
         <div class="card m-2">
             <div class="card-body">
                 <h3 class="card-title"> Temperaure on sensor </h3>
-                <p class="card-text"> {show_thermomether()} {temp} &deg;C</p>
+                <p class="card-text"> {show_thermomether()} <span id="temp_container"> {temp} </span> &deg;C</p>
             </div>
         </div>
     """
